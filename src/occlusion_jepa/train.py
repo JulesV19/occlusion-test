@@ -49,7 +49,13 @@ def evaluate(cfg: Config, encoder, ema_encoder, predictor, val_batch,
     z_tgt = ema_encoder(frames[:, cfg.context_len:])
     err = (z_pred - z_tgt).pow(2).mean(dim=-1)                        # (N, H)
     cos = torch.nn.functional.cosine_similarity(z_pred, z_tgt, dim=-1)
-    out = {"val_inv": err.mean().item(), "val_cos": cos.mean().item()}
+    # MSE normalisée par la variance des cibles : erreur RELATIVE, comparable
+    # d'epoch en epoch même quand VICReg étale l'espace latent (la MSE brute,
+    # elle, est artificiellement basse au début → best.pt trompeur)
+    var_tgt = z_tgt.reshape(-1, z_tgt.shape[-1]).var(dim=0).mean()
+    out = {"val_inv": err.mean().item(),
+           "val_nmse": (err.mean() / var_tgt).item(),
+           "val_cos": cos.mean().item()}
     if occ.any():
         out["val_inv_occ"] = err[occ].mean().item()
     encoder.train(), predictor.train()
@@ -106,24 +112,24 @@ def train_jepa(cfg: Config, device: str | None = None, ckpt_dir: str = "."):
             if step % cfg.log_every == 0:
                 pbar.set_postfix(inv=f"{logs['inv']:.4f}",
                                  z_std=f"{logs['z_std']:.2f}",
-                                 best=f"{best_val:.4f}")
+                                 best_nmse=f"{best_val:.4f}")
 
         rec = {k: v / cfg.steps_per_epoch for k, v in acc.items()}
         rec.update(evaluate(cfg, encoder, ema_encoder, predictor, val_batch, device))
         rec.update(epoch=epoch, step=step)
         history.append(rec)
 
-        extra = {"epoch": epoch, "val_inv": rec["val_inv"]}
+        extra = {"epoch": epoch, "val_nmse": rec["val_nmse"]}
         save_checkpoint(os.path.join(ckpt_dir, "last.pt"), cfg, encoder,
                         ema_encoder, predictor, history, extra=extra)
-        is_best = rec["val_inv"] < best_val
+        is_best = rec["val_nmse"] < best_val
         if is_best:
-            best_val = rec["val_inv"]
+            best_val = rec["val_nmse"]
             save_checkpoint(os.path.join(ckpt_dir, "best.pt"), cfg, encoder,
                             ema_encoder, predictor, history, extra=extra)
         pbar.write(
             f"epoch {epoch + 1:>3}/{cfg.epochs}  "
-            f"inv {rec['inv']:.4f}  val_inv {rec['val_inv']:.4f}  "
+            f"inv {rec['inv']:.4f}  val_nmse {rec['val_nmse']:.4f}  "
             f"val_occ {rec.get('val_inv_occ', float('nan')):.4f}  "
             f"val_cos {rec['val_cos']:.3f}  z_std {rec['z_std']:.2f}"
             + ("  ← best.pt" if is_best else ""))

@@ -50,6 +50,8 @@ def plot_history(history: list):
     axes[0].plot(epochs, series("inv"), label="train")
     axes[0].plot(epochs, series("val_inv"), label="val")
     axes[0].plot(epochs, series("val_inv_occ"), label="val (occlus)", ls="--")
+    axes[0].plot(epochs, series("val_nmse"), label="val nmse (critère best)",
+                 color="black", lw=1)
     axes[0].set_yscale("log"), axes[0].set_title("loss de prédiction (inv)")
     axes[0].legend(fontsize=8)
 
