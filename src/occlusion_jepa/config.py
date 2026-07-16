@@ -6,7 +6,7 @@ class Config:
     # --- Données ---
     img_size: int = 64
     disk_radius: float = 5.0
-    bar_width: float = 15.0          # occlusion totale ≈ (bar_width - 2r) / |vx| ≈ 3 frames
+    bar_width: float = 20.0          # occlusion totale ≈ (bar_width - 2r) / |vx| ≈ 3 frames
     bar_color: float = 0.5
     bar_margin: float = 12.0         # marge min barre-bords ; position tirée par épisode
     speed_x_range: tuple = (2.5, 4.5)  # |vx| en px/frame
