@@ -18,6 +18,10 @@ class Config:
     # --- Modèles ---
     embed_dim: int = 128
     enc_channels: tuple = (32, 64, 128, 256)
+    predictor_type: str = "markov"   # "markov" : MLP sans état, ẑ_t = f(ẑ_{t-1}, ẑ_{t-2})
+                                     # "gru"    : récurrent (état caché privé — peut
+                                     #            absorber la permanence de l'objet)
+    mlp_hidden: int = 256            # taille cachée du prédicteur markovien
     gru_hidden: int = 256
     gru_layers: int = 1
 

@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from .config import Config
 from .data import make_loader, sample_batch
 from .losses import jepa_loss
-from .models import Encoder, Predictor, ema_update, make_ema_encoder
+from .models import Encoder, ema_update, make_ema_encoder, make_predictor
 
 VAL_SEED = 987_654
 
@@ -69,7 +69,7 @@ def train_jepa(cfg: Config, device: str | None = None, ckpt_dir: str = "."):
 
     encoder = Encoder(cfg).to(device)
     ema_encoder = make_ema_encoder(encoder)
-    predictor = Predictor(cfg).to(device)
+    predictor = make_predictor(cfg).to(device)
 
     params = list(encoder.parameters()) + list(predictor.parameters())
     opt = torch.optim.AdamW(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
@@ -147,11 +147,15 @@ def save_checkpoint(path: str, cfg: Config, encoder, ema_encoder, predictor,
 def load_checkpoint(path: str, device: str = "cpu"):
     ckpt = torch.load(path, map_location=device, weights_only=False)
     cfg = Config(**ckpt["cfg"])
+    if "predictor_type" not in ckpt["cfg"]:
+        # checkpoints antérieurs au switch markov/gru : on infère depuis les poids
+        cfg.predictor_type = ("gru" if any(k.startswith("gru.")
+                                           for k in ckpt["predictor"]) else "markov")
     encoder = Encoder(cfg).to(device)
     encoder.load_state_dict(ckpt["encoder"])
     ema_encoder = Encoder(cfg).to(device)
     ema_encoder.load_state_dict(ckpt["ema_encoder"])
-    predictor = Predictor(cfg).to(device)
+    predictor = make_predictor(cfg).to(device)
     predictor.load_state_dict(ckpt["predictor"])
     return cfg, encoder, ema_encoder, predictor, ckpt["history"]
 

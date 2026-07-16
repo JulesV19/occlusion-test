@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 
 from .config import Config
 from .data import make_sequence, render_frames, sample_batch
-from .models import Decoder, Encoder, Predictor
+from .models import Decoder, Encoder
 
 
 # ------------------------------------------------------------- helpers éval
@@ -31,7 +31,7 @@ def encode_dataset(cfg: Config, encoder: Encoder, n_seqs: int, device: str,
 
 
 @torch.no_grad()
-def rollout(cfg: Config, encoder: Encoder, predictor: Predictor,
+def rollout(cfg: Config, encoder: Encoder, predictor,
             frames: torch.Tensor, device: str) -> torch.Tensor:
     """frames (B, T, 1, S, S) -> ẑ prédits (B, H, D) à partir du contexte. CPU."""
     encoder.eval()
@@ -108,7 +108,7 @@ def _split_metrics(probe, z, positions, occluded) -> dict:
     return out
 
 
-def probe_report(cfg: Config, encoder: Encoder, predictor: Predictor,
+def probe_report(cfg: Config, encoder: Encoder, predictor,
                  device: str, n_train: int = 512, n_eval: int = 256) -> dict:
     """Probe linéaire entraînée sur embeddings réels, évaluée sur :
     - embeddings réels held-out (visible vs occlus)

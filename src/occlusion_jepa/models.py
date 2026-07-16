@@ -36,7 +36,37 @@ class Encoder(nn.Module):
         return z.view(B, T, -1) if seq else z
 
 
-class Predictor(nn.Module):
+class MarkovPredictor(nn.Module):
+    """Prédicteur SANS ÉTAT : ẑ_t = ẑ_{t-1} + MLP(ẑ_{t-2}, ẑ_{t-1}).
+
+    Deux latents consécutifs ≈ position + vitesse (dynamique d'ordre 2).
+    Aucun état caché privé : la seule mémoire qui traverse une occlusion est
+    le latent lui-même — si la permanence de l'objet existe, elle doit vivre
+    dans les ẑ, pas dans le prédicteur."""
+
+    def __init__(self, cfg: Config):
+        super().__init__()
+        assert cfg.context_len >= 2, "MarkovPredictor requiert context_len >= 2"
+        D, h = cfg.embed_dim, cfg.mlp_hidden
+        self.net = nn.Sequential(
+            nn.Linear(2 * D, h), nn.SiLU(),
+            nn.Linear(h, h), nn.SiLU(),
+            nn.Linear(h, D),
+        )
+
+    def forward(self, z_context: torch.Tensor, horizon: int) -> torch.Tensor:
+        """z_context : (B, C, D) -> ẑ prédits (B, H, D). Seuls les deux derniers
+        embeddings du contexte sont utilisés (état d'ordre 2)."""
+        z_prev2, z_prev = z_context[:, -2], z_context[:, -1]
+        preds = []
+        for _ in range(horizon):
+            z_next = z_prev + self.net(torch.cat([z_prev2, z_prev], dim=-1))
+            preds.append(z_next)
+            z_prev2, z_prev = z_prev, z_next
+        return torch.stack(preds, dim=1)
+
+
+class GRUPredictor(nn.Module):
     """GRU : les C embeddings de contexte initialisent l'état caché, puis rollout
     autorégressif de H pas (le ẑ produit est réinjecté en entrée du pas suivant)."""
 
@@ -60,6 +90,14 @@ class Predictor(nn.Module):
             z = self.head(out[:, -1])
             preds.append(z)
         return torch.stack(preds, dim=1)
+
+
+def make_predictor(cfg: Config) -> nn.Module:
+    if cfg.predictor_type == "markov":
+        return MarkovPredictor(cfg)
+    if cfg.predictor_type == "gru":
+        return GRUPredictor(cfg)
+    raise ValueError(f"predictor_type inconnu : {cfg.predictor_type!r}")
 
 
 class Decoder(nn.Module):
