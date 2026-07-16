@@ -25,7 +25,8 @@ from matplotlib.patches import Rectangle
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from occlusion_jepa import Config
-from occlusion_jepa.data import make_sequence, simulate_trajectory, occlusion_flags
+from occlusion_jepa.data import (make_sequence, occlusion_flags, sample_bar_x,
+                                 simulate_trajectory)
 
 
 # ------------------------------------------------------------------ viewer
@@ -48,9 +49,10 @@ class SequenceViewer:
 
         # panneau trajectoire (repère image : y vers le bas)
         S = cfg.img_size
-        self.ax_traj.add_patch(Rectangle(
-            (cfg.bar_x, 0), cfg.bar_width, S, color="gray", alpha=0.35,
-            label="barre"))
+        self.bar_rect = Rectangle(
+            (self.bar_x, 0), cfg.bar_width, S, color="gray", alpha=0.35,
+            label="barre")
+        self.ax_traj.add_patch(self.bar_rect)
         self.traj_line, = self.ax_traj.plot([], [], "-", color="royalblue", lw=1.5)
         self.traj_dot, = self.ax_traj.plot([], [], "o", color="royalblue", ms=8)
         self.ax_traj.set_xlim(0, S), self.ax_traj.set_ylim(S, 0)
@@ -68,8 +70,10 @@ class SequenceViewer:
         self.frames = seq["frames"][:, 0].numpy()
         self.positions = seq["positions"].numpy()
         self.occ = seq["occluded"].numpy()
+        self.bar_x = seq["bar_x"].item()
         self.t = 0
         if draw:
+            self.bar_rect.set_x(self.bar_x)
             self._draw()
 
     def _draw(self):
@@ -119,8 +123,9 @@ def occlusion_durations(cfg: Config, n_seqs: int, seed: int) -> np.ndarray:
     rng = np.random.default_rng(seed)
     durations = []
     for _ in range(n_seqs):
-        pos = simulate_trajectory(long_cfg, rng, ensure_crossing=False)
-        occ = occlusion_flags(long_cfg, pos).astype(int)
+        bar_x = sample_bar_x(long_cfg, rng)
+        pos = simulate_trajectory(long_cfg, rng, ensure_crossing=False, bar_x=bar_x)
+        occ = occlusion_flags(long_cfg, pos, bar_x).astype(int)
         d = np.diff(np.concatenate([[0], occ, [0]]))
         for s, e in zip(np.where(d == 1)[0], np.where(d == -1)[0]):
             if s > 0 and e < len(occ):  # épisodes complets uniquement

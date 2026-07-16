@@ -2,8 +2,9 @@
 
 Étude de la **permanence de l'objet** dans les représentations d'un JEPA temporel.
 
-Un disque rebondit sur un écran 64×64 en niveaux de gris. Une barre verticale fixe
-l'occulte totalement pendant ~3 frames lors de sa traversée. On entraîne un JEPA
+Un disque rebondit sur un écran 64×64 en niveaux de gris. Une barre verticale —
+dont la position est tirée aléatoirement à chaque épisode (fixe au sein d'un
+épisode) — l'occulte totalement pendant ~3 frames lors de sa traversée. On entraîne un JEPA
 (encodeur CNN + prédicteur GRU en rollout autorégressif, cible EMA, régularisation
 VICReg) à prédire les embeddings des frames futures, puis on regarde :
 

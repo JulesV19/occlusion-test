@@ -75,14 +75,15 @@ def plot_history(history: list):
 def pca3d_figures(cfg: Config, encoder, predictor, device: str,
                   n_seqs: int = 200, seed: int = 999):
     """Deux figures plotly :
-    1. Nuage PCA 3D de tous les embeddings, coloré par x du disque,
-       frames occluses en losanges noirs.
+    1. Nuage PCA 3D de tous les embeddings, coloré par x du disque ;
+       frames occluses en losanges colorés par la position de la barre.
     2. Un épisode avec traversée : trajectoire latente réelle vs rollout prédit.
     """
     data = encode_dataset(cfg, encoder, n_seqs, device, seed=seed)
     z = data["z"].flatten(0, 1).numpy()
     pos = data["positions"].flatten(0, 1).numpy()
     occ = data["occluded"].flatten(0, 1).numpy()
+    bar = np.repeat(data["bar_x"].numpy(), cfg.seq_len)  # bar_x par frame
 
     pca = PCA(n_components=3).fit(z)
     p = pca.transform(z)
@@ -96,8 +97,10 @@ def pca3d_figures(cfg: Config, encoder, predictor, device: str,
         name="visible"))
     fig_cloud.add_trace(go.Scatter3d(
         x=p[occ, 0], y=p[occ, 1], z=p[occ, 2], mode="markers",
-        marker=dict(size=3.5, color="black", symbol="diamond", opacity=0.9),
-        name="occlus"))
+        marker=dict(size=3.5, color=bar[occ], colorscale="Greys",
+                    symbol="diamond", opacity=0.9,
+                    colorbar=dict(title="bar_x (occlus)", x=1.18, len=0.6)),
+        name="occlus (couleur = bar_x)"))
     fig_cloud.update_layout(
         title=f"PCA 3D des embeddings — var. expliquée {evr.sum():.0%} "
               f"({', '.join(f'{v:.0%}' for v in evr)})",

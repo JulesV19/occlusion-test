@@ -8,6 +8,7 @@ class Config:
     disk_radius: float = 5.0
     bar_width: float = 15.0          # occlusion totale ≈ (bar_width - 2r) / |vx| ≈ 3 frames
     bar_color: float = 0.5
+    bar_margin: float = 12.0         # marge min barre-bords ; position tirée par épisode
     speed_x_range: tuple = (2.5, 4.5)  # |vx| en px/frame
     speed_y_range: tuple = (0.5, 3.0)  # |vy| en px/frame
     context_len: int = 4             # C frames de contexte
@@ -53,6 +54,6 @@ class Config:
         return self.context_len + self.horizon
 
     @property
-    def bar_x(self) -> float:
-        """Bord gauche de la barre (centrée horizontalement)."""
-        return (self.img_size - self.bar_width) / 2
+    def bar_x_range(self) -> tuple:
+        """Plage du bord gauche de la barre (tirée uniformément par épisode)."""
+        return (self.bar_margin, self.img_size - self.bar_width - self.bar_margin)
