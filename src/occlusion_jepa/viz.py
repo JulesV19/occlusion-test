@@ -38,14 +38,34 @@ def plot_sequence(cfg: Config, seed: int = 0):
 
 
 def plot_history(history: list):
-    """Courbes des termes de loss + std des embeddings (détection de collapse)."""
-    steps = [h["step"] for h in history]
+    """Courbes par epoch : loss de prédiction (train/val/val occlus), termes
+    VICReg, cosine de validation, std des embeddings (détection de collapse)."""
+    epochs = [h["epoch"] for h in history]
+
+    def series(key):
+        return [h.get(key, float("nan")) for h in history]
+
     fig, axes = plt.subplots(1, 4, figsize=(16, 3))
-    for ax, key in zip(axes, ["inv", "var", "cov", "z_std"]):
-        ax.plot(steps, [h[key] for h in history])
-        ax.set_title(key), ax.set_xlabel("step"), ax.grid(alpha=0.3)
-        if key == "inv":
-            ax.set_yscale("log")
+
+    axes[0].plot(epochs, series("inv"), label="train")
+    axes[0].plot(epochs, series("val_inv"), label="val")
+    axes[0].plot(epochs, series("val_inv_occ"), label="val (occlus)", ls="--")
+    axes[0].set_yscale("log"), axes[0].set_title("loss de prédiction (inv)")
+    axes[0].legend(fontsize=8)
+
+    axes[1].plot(epochs, series("var"), label="var")
+    axes[1].plot(epochs, series("cov"), label="cov")
+    axes[1].set_title("VICReg"), axes[1].legend(fontsize=8)
+
+    axes[2].plot(epochs, series("val_cos"), color="seagreen")
+    axes[2].set_title("val cosine(ẑ, z̄)"), axes[2].set_ylim(None, 1.0)
+
+    axes[3].plot(epochs, series("z_std"), color="gray")
+    axes[3].axhline(1.0, color="red", ls=":", lw=1)
+    axes[3].set_title("z_std (↓0 = collapse)")
+
+    for ax in axes:
+        ax.set_xlabel("epoch"), ax.grid(alpha=0.3)
     fig.tight_layout()
     return fig
 

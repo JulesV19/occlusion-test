@@ -27,7 +27,9 @@ class Config:
 
     # --- Entraînement ---
     batch_size: int = 128
-    steps: int = 30_000
+    epochs: int = 60
+    steps_per_epoch: int = 500       # dataset infini : une "epoch" = ce nb de steps
+    val_seqs: int = 256              # séquences de validation figées (seed fixe)
     lr: float = 3e-4
     weight_decay: float = 0.05
     warmup_steps: int = 1_000
@@ -41,6 +43,10 @@ class Config:
     probe_steps: int = 3_000
     probe_lr: float = 1e-3
     probe_batch_size: int = 128
+
+    @property
+    def steps(self) -> int:
+        return self.epochs * self.steps_per_epoch
 
     @property
     def seq_len(self) -> int:
