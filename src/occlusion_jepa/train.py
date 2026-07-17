@@ -122,7 +122,7 @@ def train_jepa(cfg: Config, device: str | None = None, ckpt_dir: str = "."):
         extra = {"epoch": epoch, "val_nmse": rec["val_nmse"]}
         save_checkpoint(os.path.join(ckpt_dir, "last.pt"), cfg, encoder,
                         ema_encoder, predictor, history, extra=extra)
-        is_best = rec["val_nmse"] < best_val
+        is_best = epoch >= cfg.best_from_epoch and rec["val_nmse"] < best_val
         if is_best:
             best_val = rec["val_nmse"]
             save_checkpoint(os.path.join(ckpt_dir, "best.pt"), cfg, encoder,

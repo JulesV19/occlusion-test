@@ -35,6 +35,8 @@ class Config:
     epochs: int = 60
     steps_per_epoch: int = 500       # dataset infini : une "epoch" = ce nb de steps
     val_seqs: int = 256              # séquences de validation figées (seed fixe)
+    best_from_epoch: int = 10        # best.pt ignoré avant : les représentations des
+                                     # premières epochs sont trop simples → val trompeuse
     lr: float = 3e-4
     weight_decay: float = 0.05
     warmup_steps: int = 1_000
